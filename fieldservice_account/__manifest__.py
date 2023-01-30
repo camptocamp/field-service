@@ -15,6 +15,6 @@
         "views/fsm_order.xml",
     ],
     "license": "AGPL-3",
-    "development_status": "beta",
+    "development_status": "Beta",
     "maintainers": ["osimallen", "brian10048", "bodedra"],
 }
