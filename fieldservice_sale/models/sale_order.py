@@ -25,9 +25,11 @@ class SaleOrder(models.Model):
     @api.depends("order_line")
     def _compute_fsm_order_ids(self):
         for sale in self:
-            fsm = self.env["fsm.order"]
-            fsm |= self.env["fsm.order"].search([("sale_line_id", "in", sale.order_line.ids)])
-            fsm |= self.env["fsm.order"].search([("sale_id", "=", sale.id)])
+            fsm = self.env["fsm.order"].search(
+                "|",
+                ("sale_id", "=", sale.id),
+                ("sale_line_id", "in", sale.order_line.ids),
+            )
             sale.fsm_order_ids = fsm
             sale.fsm_order_count = len(sale.fsm_order_ids)
 
@@ -125,7 +127,7 @@ class SaleOrder(models.Model):
         result = super()._action_confirm()
         for so in self:
             lines = so.order_line
-            if any(l.product_id.field_service_tracking != "no" for l in lines):
+            if any(sol.product_id.field_service_tracking != "no" for sol in lines):
                 if not so.fsm_location_id:
                     raise ValidationError(_("FSM Location must be set"))
                 lines._field_service_generation()
