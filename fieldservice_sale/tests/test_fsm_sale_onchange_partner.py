@@ -4,7 +4,8 @@ from odoo.tests.common import TransactionCase
 
 
 class FSMSale(TransactionCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(cls):
         """Create 3 related partners : a parent company, a child partner and
         a child shipping partner.
 
@@ -13,40 +14,31 @@ class FSMSale(TransactionCase):
         the SO's onchange_partner_id and check if the fsm_location_id
         is the expected one.
         """
-        super(FSMSale, self).setUp()
+        super().setUpClass()
         # create a parent company
-        self.commercial_partner = self.env["res.partner"].create(
-            {
-                "name": "Company Commercial Partner",
-                "is_company": True,
-            }
+        cls.commercial_partner = cls.env["res.partner"].create(
+            {"name": "Company Commercial Partner", "is_company": True}
         )
         # create a child partner
-        self.partner = self.env["res.partner"].create(
-            {
-                "name": "Child Partner",
-                "parent_id": self.commercial_partner.id,
-            }
+        cls.partner1 = cls.env["res.partner"].create(
+            {"name": "Child Partner 1", "parent_id": cls.commercial_partner.id}
         )
-        self.partner2 = self.env["res.partner"].create(
-            {
-                "name": "Partner 2",
-                "parent_id": self.commercial_partner.id,
-            }
+        cls.partner2 = cls.env["res.partner"].create(
+            {"name": "Child Partner 2", "parent_id": cls.commercial_partner.id}
         )
         # create a child partner shipping address
-        self.shipping_partner = self.env["res.partner"].create(
+        cls.shipping_partner = cls.env["res.partner"].create(
             {
                 "name": "Shipping Partner",
-                "parent_id": self.commercial_partner.id,
+                "parent_id": cls.commercial_partner.id,
                 "type": "delivery",
             }
         )
         # Demo FS location
-        self.location = self.env.ref("fieldservice.location_1")
-        self.partner2.fsm_location = self.location.id
+        cls.location = cls.env.ref("fieldservice.location_1")
+        cls.partner2.fsm_location = cls.location
 
-    def test_autofill_so_fsm_location(self):
+    def test_00_autofill_so_fsm_location(self):
         """First case :
         - commercial_partner IS NOT a fsm_location
         - partner IS a fsm_location
@@ -54,13 +46,14 @@ class FSMSale(TransactionCase):
         Test if the SO's fsm_location_id is autofilled with the expected
         partner_location.
         """
-        # Link demo FS location to self.partner
-        self.location.partner_id = self.partner.id
-        # create a Sale Order and run onchange_partner_id
+        # Link demo FS location to self.partner1
+        self.location.partner_id = self.partner1
+        # Create a Sale Order and run onchange_partner_id
         self.so = self.env["sale.order"].create({"partner_id": self.partner2.id})
         self.so.onchange_partner_id()
+        self.assertEqual(self.so.fsm_location_id, self.location)
 
-    def test_1_autofill_so_fsm_location(self):
+    def test_01_autofill_so_fsm_location(self):
         """First case :
         - commercial_partner IS NOT a fsm_location
         - partner IS a fsm_location
@@ -69,13 +62,13 @@ class FSMSale(TransactionCase):
         partner_location.
         """
         # Link demo FS location to self.partner
-        self.location.partner_id = self.partner.id
+        self.location.partner_id = self.partner1
         # create a Sale Order and run onchange_partner_id
-        self.so = self.env["sale.order"].create({"partner_id": self.partner.id})
+        self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
         self.so.onchange_partner_id()
-        self.assertEqual(self.so.fsm_location_id.id, self.location.id)
+        self.assertEqual(self.so.fsm_location_id, self.location)
 
-    def test_2_autofill_so_fsm_location(self):
+    def test_02_autofill_so_fsm_location(self):
         """Second case :
         - commercial_partner IS NOT a fsm_location
         - partner IS NOT a fsm_location
@@ -86,11 +79,11 @@ class FSMSale(TransactionCase):
         # Link demo FS location to self.shipping_partner
         self.location.partner_id = self.shipping_partner.id
         # create a Sale Order and run onchange_partner_id
-        self.so = self.env["sale.order"].create({"partner_id": self.partner.id})
+        self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
         self.so.onchange_partner_id()
-        self.assertEqual(self.so.fsm_location_id.id, self.location.id)
+        self.assertEqual(self.so.fsm_location_id, self.location)
 
-    def test_3_autofill_so_fsm_location(self):
+    def test_03_autofill_so_fsm_location(self):
         """Third case :
         - commercial_partner IS a fsm_location
         - partner IS NOT a fsm_location
@@ -99,8 +92,8 @@ class FSMSale(TransactionCase):
         commercial_partner_location.
         """
         # Link demo FS location to self.commercial_partner
-        self.location.partner_id = self.commercial_partner.id
+        self.location.partner_id = self.commercial_partner
         # create a Sale Order and run onchange_partner_id
-        self.so = self.env["sale.order"].create({"partner_id": self.partner.id})
+        self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
         self.so.onchange_partner_id()
-        self.assertEqual(self.so.fsm_location_id.id, self.location.id)
+        self.assertEqual(self.so.fsm_location_id, self.location)

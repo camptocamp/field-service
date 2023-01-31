@@ -14,11 +14,11 @@
     ],
     "data": [
         "security/ir.model.access.csv",
+        "security/res_groups.xml",
         "views/fsm_location.xml",
         "views/fsm_order.xml",
         "views/product_template.xml",
         "views/sale_order.xml",
-        "data/fsm_template_group.xml",
     ],
     "license": "AGPL-3",
     "development_status": "Beta",
