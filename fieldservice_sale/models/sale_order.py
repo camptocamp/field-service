@@ -12,6 +12,10 @@ class SaleOrder(models.Model):
         "fsm.location",
         string="Service Location",
         help="SO Lines generating a FSM order will be for this location",
+        compute="_compute_fsm_location_id",
+        precompute=True,
+        store=True,
+        readonly=False,
     )
     fsm_order_ids = fields.Many2many(
         "fsm.order",
@@ -26,33 +30,34 @@ class SaleOrder(models.Model):
     def _compute_fsm_order_ids(self):
         for sale in self:
             fsm = self.env["fsm.order"].search(
-                "|",
-                ("sale_id", "=", sale.id),
-                ("sale_line_id", "in", sale.order_line.ids),
+                [
+                    "|",
+                    ("sale_id", "=", sale.id),
+                    ("sale_line_id", "in", sale.order_line.ids),
+                ]
             )
             sale.fsm_order_ids = fsm
             sale.fsm_order_count = len(sale.fsm_order_ids)
 
-    @api.onchange("partner_id")
-    def onchange_partner_id(self):
+    @api.depends("partner_id", "partner_shipping_id")
+    def _compute_fsm_location_id(self):
         """
         Autofill the Sale Order's FS location with the partner_id,
         the partner_shipping_id or the partner_id.commercial_partner_id if
         they are FS locations.
         """
-        res = super(SaleOrder, self).onchange_partner_id()
-        location = self.partner_id.fsm_location
-        if not location:
-            domain = [
-                "|",
-                "|",
-                ("partner_id", "=", self.partner_id.id),
-                ("partner_id", "=", self.partner_shipping_id.id),
-                ("partner_id", "=", self.partner_id.commercial_partner_id.id),
-            ]
-            location = self.env["fsm.location"].search(domain, limit=1)
-        self.fsm_location_id = location
-        return res
+        for so in self:
+            location = so.partner_id.fsm_location
+            if not location:
+                domain = [
+                    "|",
+                    "|",
+                    ("partner_id", "=", so.partner_id.id),
+                    ("partner_id", "=", so.partner_shipping_id.id),
+                    ("partner_id", "=", so.partner_id.commercial_partner_id.id),
+                ]
+                location = self.env["fsm.location"].search(domain, limit=1)
+            so.fsm_location_id = location
 
     def _field_create_fsm_order_prepare_values(self):
         self.ensure_one()

@@ -11,7 +11,7 @@ class FSMSale(TransactionCase):
 
         For each test, a different partner is a fsm_location.
         A SO is created with the child partner as customer. The test run
-        the SO's onchange_partner_id and check if the fsm_location_id
+        the SO's location autofill and check if the fsm_location_id
         is the expected one.
         """
         super().setUpClass()
@@ -48,9 +48,7 @@ class FSMSale(TransactionCase):
         """
         # Link demo FS location to self.partner1
         self.location.partner_id = self.partner1
-        # Create a Sale Order and run onchange_partner_id
         self.so = self.env["sale.order"].create({"partner_id": self.partner2.id})
-        self.so.onchange_partner_id()
         self.assertEqual(self.so.fsm_location_id, self.location)
 
     def test_01_autofill_so_fsm_location(self):
@@ -63,9 +61,7 @@ class FSMSale(TransactionCase):
         """
         # Link demo FS location to self.partner
         self.location.partner_id = self.partner1
-        # create a Sale Order and run onchange_partner_id
         self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
-        self.so.onchange_partner_id()
         self.assertEqual(self.so.fsm_location_id, self.location)
 
     def test_02_autofill_so_fsm_location(self):
@@ -78,9 +74,7 @@ class FSMSale(TransactionCase):
         """
         # Link demo FS location to self.shipping_partner
         self.location.partner_id = self.shipping_partner.id
-        # create a Sale Order and run onchange_partner_id
         self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
-        self.so.onchange_partner_id()
         self.assertEqual(self.so.fsm_location_id, self.location)
 
     def test_03_autofill_so_fsm_location(self):
@@ -93,7 +87,5 @@ class FSMSale(TransactionCase):
         """
         # Link demo FS location to self.commercial_partner
         self.location.partner_id = self.commercial_partner
-        # create a Sale Order and run onchange_partner_id
         self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
-        self.so.onchange_partner_id()
         self.assertEqual(self.so.fsm_location_id, self.location)
