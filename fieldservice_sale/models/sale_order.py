@@ -47,8 +47,9 @@ class SaleOrder(models.Model):
         they are FS locations.
         """
         for so in self:
-            location = so.partner_id.fsm_location
-            if not location:
+            if so.partner_id.fsm_location:
+                domain = [("partner_id", "=", so.partner_id.id)]
+            else:
                 domain = [
                     "|",
                     "|",
@@ -56,8 +57,7 @@ class SaleOrder(models.Model):
                     ("partner_id", "=", so.partner_shipping_id.id),
                     ("partner_id", "=", so.partner_id.commercial_partner_id.id),
                 ]
-                location = self.env["fsm.location"].search(domain, limit=1)
-            so.fsm_location_id = location
+            so.fsm_location_id = self.env["fsm.location"].search(domain, limit=1)
 
     def _field_create_fsm_order_prepare_values(self):
         self.ensure_one()

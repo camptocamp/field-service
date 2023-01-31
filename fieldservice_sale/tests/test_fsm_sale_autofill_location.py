@@ -1,6 +1,6 @@
 # Copyright (C) 2019 Clément Mombereau (Akretion)
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl.html)
-from odoo.tests.common import TransactionCase
+from odoo.tests.common import Form, TransactionCase
 
 
 class FSMSale(TransactionCase):
@@ -20,11 +20,8 @@ class FSMSale(TransactionCase):
             {"name": "Company Commercial Partner", "is_company": True}
         )
         # create a child partner
-        cls.partner1 = cls.env["res.partner"].create(
+        cls.partner = cls.env["res.partner"].create(
             {"name": "Child Partner 1", "parent_id": cls.commercial_partner.id}
-        )
-        cls.partner2 = cls.env["res.partner"].create(
-            {"name": "Child Partner 2", "parent_id": cls.commercial_partner.id}
         )
         # create a child partner shipping address
         cls.shipping_partner = cls.env["res.partner"].create(
@@ -35,57 +32,67 @@ class FSMSale(TransactionCase):
             }
         )
         # Demo FS location
-        cls.location = cls.env.ref("fieldservice.location_1")
-        cls.partner2.fsm_location = cls.location
+        cls.location1 = cls.env.ref("fieldservice.location_1")
+        cls.location2 = cls.env.ref("fieldservice.location_2")
+        cls.location3 = cls.env.ref("fieldservice.location_3")
 
     def test_00_autofill_so_fsm_location(self):
-        """First case :
-        - commercial_partner IS NOT a fsm_location
-        - partner IS a fsm_location
-        - shipping_partner IS NOT a fsm_location
-        Test if the SO's fsm_location_id is autofilled with the expected
-        partner_location.
+        """Check location autofill from SO partner
+
+        SO partner is an FSM location linked to location 2 => expect location2
+        (location 1 and 3 are ignored because we want only location explicitly
+        linked to the partner)
         """
-        # Link demo FS location to self.partner1
-        self.location.partner_id = self.partner1
-        self.so = self.env["sale.order"].create({"partner_id": self.partner2.id})
-        self.assertEqual(self.so.fsm_location_id, self.location)
+        self.partner.fsm_location = True
+        self.location1.partner_id = self.commercial_partner
+        self.location2.partner_id = self.partner
+        self.location3.partner_id = self.shipping_partner
+        with Form(self.env["sale.order"]) as so_form:
+            so_form.partner_id = self.partner
+        so = so_form.save()
+        self.assertEqual(so.fsm_location_id, self.location2)
 
     def test_01_autofill_so_fsm_location(self):
-        """First case :
-        - commercial_partner IS NOT a fsm_location
-        - partner IS a fsm_location
-        - shipping_partner IS NOT a fsm_location
-        Test if the SO's fsm_location_id is autofilled with the expected
-        partner_location.
+        """Check location autofill from SO partner
+
+        SO partner is not an FSM location defined, but location1 is linked to
+        its commercial partner => expect location 1 (because of ordering)
         """
-        # Link demo FS location to self.partner
-        self.location.partner_id = self.partner1
-        self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
-        self.assertEqual(self.so.fsm_location_id, self.location)
+        self.partner.fsm_location = False
+        self.location1.partner_id = self.commercial_partner
+        self.location2.partner_id = self.partner
+        self.location3.partner_id = self.shipping_partner
+        with Form(self.env["sale.order"]) as so_form:
+            so_form.partner_id = self.partner
+        so = so_form.save()
+        self.assertEqual(so.fsm_location_id, self.location1)
 
     def test_02_autofill_so_fsm_location(self):
-        """Second case :
-        - commercial_partner IS NOT a fsm_location
-        - partner IS NOT a fsm_location
-        - shipping_partner IS a fsm_location
-        Test if the SO's fsm_location_id is autofilled with the expected
-        shipping_partner_location.
+        """Check location autofill from SO partner
+
+        SO partner is not an FSM location defined, but location1 is linked to
+        the partner itself => expect location 1 (because of ordering)
         """
-        # Link demo FS location to self.shipping_partner
-        self.location.partner_id = self.shipping_partner.id
-        self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
-        self.assertEqual(self.so.fsm_location_id, self.location)
+        self.partner.fsm_location = False
+        self.location1.partner_id = self.partner
+        self.location2.partner_id = self.shipping_partner
+        self.location3.partner_id = self.commercial_partner
+        with Form(self.env["sale.order"]) as so_form:
+            so_form.partner_id = self.partner
+        so = so_form.save()
+        self.assertEqual(so.fsm_location_id, self.location1)
 
     def test_03_autofill_so_fsm_location(self):
-        """Third case :
-        - commercial_partner IS a fsm_location
-        - partner IS NOT a fsm_location
-        - shipping_partner IS NOT a fsm_location
-        Test if the SO's fsm_location_id is autofilled with the expected
-        commercial_partner_location.
+        """Check location autofill from SO partner
+
+        SO partner is not an FSM location defined, but location1 is linked to
+        its shipping partner => expect location 1 (because of ordering)
         """
-        # Link demo FS location to self.commercial_partner
-        self.location.partner_id = self.commercial_partner
-        self.so = self.env["sale.order"].create({"partner_id": self.partner1.id})
-        self.assertEqual(self.so.fsm_location_id, self.location)
+        self.partner.fsm_location = False
+        self.location1.partner_id = self.shipping_partner
+        self.location2.partner_id = self.commercial_partner
+        self.location3.partner_id = self.partner
+        with Form(self.env["sale.order"]) as so_form:
+            so_form.partner_id = self.partner
+        so = so_form.save()
+        self.assertEqual(so.fsm_location_id, self.location1)
