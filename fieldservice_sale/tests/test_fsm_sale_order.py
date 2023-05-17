@@ -487,3 +487,24 @@ class TestFSMSaleOrder(TestFSMSale):
         self.assertEqual(
             len(invoices.ids), 1, "FSM Sale: Sale Order 4 should create 1 invoice"
         )
+
+    def test_sale_order_5(self):
+        """Test ValidationError is raised only if order line
+        display_type not in ("line_section", "line_note")
+        """
+        # add note as order line
+        self.env["sale.order.line"].create(
+            {
+                "name": "This is a note",
+                "display_type": "line_note",
+                "product_id": False,
+                "product_uom_qty": 0,
+                "product_uom": False,
+                "price_unit": 0,
+                "order_id": self.sale_order.id,
+                "tax_id": False,
+            }
+        )
+        # Confirm the sale order
+        with self.assertRaises(ValidationError), self.cr.savepoint():
+            self.sale_order.action_confirm()
