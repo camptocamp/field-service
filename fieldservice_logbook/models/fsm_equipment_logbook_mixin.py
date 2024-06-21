@@ -37,7 +37,11 @@ class FsmEquipmentLogbookMixin(models.AbstractModel):
         logbook_data = self._read_group_logbook(logbook)
         logbook_mapped_data = self._get_mapped_logbook_data(logbook, logbook_data)
         for record in self:
-            equipment_logs = logbook_mapped_data.get(record.id, logbook)
+            # for the `fsm.order` model we need to map by location_id
+            if record._name == "fsm.order":
+                equipment_logs = logbook_mapped_data.get(record.location_id.id, logbook)
+            else:
+                equipment_logs = logbook_mapped_data.get(record.id, logbook)
             record.equipment_logs_count = len(equipment_logs)
             record.equipment_logs_ids = equipment_logs
 

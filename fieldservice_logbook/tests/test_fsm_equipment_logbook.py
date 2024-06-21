@@ -1,11 +1,14 @@
 # Copyright 2024 Camptocamp SA
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+from freezegun import freeze_time
+
 from odoo import fields
 from odoo.tests import RecordCapturer
 from odoo.tests.common import Form, TransactionCase
 
 
+@freeze_time("2024-01-01")
 class FSMEquipmentLogbook(TransactionCase):
     @classmethod
     def setUpClass(cls):

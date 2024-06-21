@@ -13,8 +13,9 @@ class FSMOrder(models.Model):
         return logbook.read_group(
             [
                 "|",
-                ("location_id", "in", self.ids),
-                ("equipment_id.location_id", "in", self.ids),
+                ("location_id", "in", self.location_id.ids),
+                ("equipment_id.location_id", "in", self.location_id.ids),
+                ("type", "=", "order"),
             ],
             ["location_id"],
             ["location_id"],
@@ -80,12 +81,12 @@ class FSMOrder(models.Model):
         stage_id = vals.get("stage_id")
         if stage_id:
             user = self.env.user
-            closed_orders = self.filtered(lambda l: l.stage_id.is_closed)  # noqa: E741
+            closed_orders = self.filtered(lambda order: order.stage_id.is_closed)
             if not user.has_group("fieldservice.group_fsm_manager") and closed_orders:
                 raise ValidationError(
                     _(
                         "The FSM Order has been closed, "
-                        "you are not permitted to changes it's stage."
+                        "you are not permitted to changes its stage."
                     )
                 )
         res = super().write(vals)

@@ -14,6 +14,7 @@ class FSMEquipment(models.Model):
                 "|",
                 ("equipment_id", "child_of", self.ids),
                 ("equipment_id", "in", self.ids),
+                ("type", "=", "equipment"),
             ],
             ["equipment_id"],
             ["equipment_id"],

@@ -14,6 +14,7 @@ class FSMLocation(models.Model):
                 "|",
                 ("location_id", "in", self.ids),
                 ("equipment_id.location_id", "in", self.ids),
+                ("type", "=", "location"),
             ],
             ["location_id"],
             ["location_id"],
