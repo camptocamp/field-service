@@ -38,7 +38,7 @@ class SaleOrderLine(models.Model):
 
     def _field_create_fsm_recurring(self):
         """Generate fsm_recurring for the given so line, and link it.
-        :return a mapping with the so line id and its linked fsm_recurring
+        return a mapping with the so line id and its linked fsm_recurring
         :rtype dict
         """
         result = {}

@@ -108,6 +108,7 @@ Contributors
 -  Serpent Consulting Services Pvt. Ltd. <support@serpentcs.com>
 -  Brian McMaster <brian@mcmpest.com>
 -  Raphaël Reverdy <raphael.reverdy@akretion.com>
+-  Italo LOPES <italo.lopes@camptocamp.com>
 
 Maintainers
 -----------
