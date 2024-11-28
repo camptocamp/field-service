@@ -47,8 +47,8 @@ Configuration
 
 To configure this module, you need to:
 
--  Follow the steps to configure ``fieldservice_repair`` module and
-   ``fieldservice_recurring``
+- Follow the steps to configure ``fieldservice_repair`` module and
+  ``fieldservice_recurring``
 
 Usage
 =====
@@ -60,7 +60,7 @@ To use this module, you can:
    step 1)
 3. Create a ``fsm.recurring.template`` Daily Maintenance with
 
-   -  order template = maintenance (created on step 2)
+   - order template = maintenance (created on step 2)
 
 4. Create a SO with a product with creation of new equipment activated
    and the generation of recurring orders.
@@ -68,7 +68,7 @@ To use this module, you can:
    delivered product and a ``fsm.recurring.order`` linked to the SO:
 6. On the ``fsm.recurring.order``:
 
-   -  set the equipment to the one delivered
+   - set the equipment to the one delivered
 
 7. click Start
 
@@ -97,7 +97,7 @@ Authors
 Contributors
 ------------
 
--  Italo Lopes <italo.lopes@camptocamp.com>
+- Italo Lopes <italo.lopes@camptocamp.com>
 
 Maintainers
 -----------
