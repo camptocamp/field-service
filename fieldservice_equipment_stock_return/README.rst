@@ -42,9 +42,9 @@ Check ``Field Service - Stock Equipment`` module configuration.
 
 To configure this module, you need to:
 
--  Go to Field Service > Configuration > Order Types
--  Check if you have at least one ``return`` order type
--  Set the ``Picking Type`` linked to the ``return`` order type
+- Go to Field Service > Configuration > Order Types
+- Check if you have at least one ``return`` order type
+- Set the ``Picking Type`` linked to the ``return`` order type
 
 Usage
 =====
@@ -77,14 +77,14 @@ Authors
 Contributors
 ------------
 
--  Italo LOPES <italo.lopes@camptocamp.com>
+- Italo LOPES <italo.lopes@camptocamp.com>
 
 Other credits
 -------------
 
 The development of this module has been financially supported by:
 
--  Camptocamp SA <https://camptocamp.com>
+- Camptocamp SA <https://camptocamp.com>
 
 Maintainers
 -----------

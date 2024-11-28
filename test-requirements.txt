@@ -1,1 +1,0 @@
-odoo-addon-fieldservice_agreement @ git+https://github.com/OCA/field-service.git@refs/pull/1266/head#subdirectory=fieldservice_agreement
