@@ -113,6 +113,7 @@ class FSMRecurringOrder(models.Model):
             "description": template.description,
             "fsm_order_template_id": template.fsm_order_template_id,
             "scheduled_duration": template.fsm_order_template_id.duration,
+            "team_id": template.fsm_order_template_id.team_id.id,
             "company_id": template.company_id,
         }
 
