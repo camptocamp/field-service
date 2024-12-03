@@ -1,9 +1,10 @@
 # Copyright (C) 2018 Open Source Integrators
 # License AGPL-3.0 or later (http://www.gnu.org/licenses/agpl).
 
+import warnings
 from datetime import datetime, timedelta
 
-from odoo import _, api, fields, models
+from odoo import Command, _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools import format_date
 
@@ -112,7 +113,12 @@ class FSMOrder(models.Model):
     location_id = fields.Many2one(
         "fsm.location", string="Location", index=True, required=True
     )
-    location_directions = fields.Char()
+    location_directions = fields.Char(
+        compute="_compute_location_directions",
+        precompute=True,
+        store=True,
+        readonly=False,
+    )
     request_early = fields.Datetime(
         string="Earliest Request Date", default=datetime.now()
     )
@@ -151,7 +157,12 @@ class FSMOrder(models.Model):
         return vals
 
     request_late = fields.Datetime(string="Latest Request Date")
-    description = fields.Text()
+    description = fields.Text(
+        compute="_compute_description",
+        precompute=True,
+        store=True,
+        readonly=False,
+    )
 
     person_ids = fields.Many2many(
         "fsm.person",
@@ -159,28 +170,28 @@ class FSMOrder(models.Model):
         check_company=True,
     )
 
-    @api.onchange("location_id")
-    def _onchange_location_id_customer(self):
-        if self.location_id:
-            self.territory_id = self.location_id.territory_id or False
-            self.branch_id = self.location_id.branch_id or False
-            self.district_id = self.location_id.district_id or False
-            self.region_id = self.location_id.region_id or False
-            self.copy_notes()
-        if self.company_id.auto_populate_equipments_on_order:
-            fsm_equipment_rec = self.env["fsm.equipment"].search(
-                [("current_location_id", "=", self.location_id.id)]
-            )
-            self.equipment_ids = [(6, 0, fsm_equipment_rec.ids)]
-
     # Planning
-    person_id = fields.Many2one("fsm.person", string="Assigned To", index=True)
+    person_id = fields.Many2one(
+        "fsm.person",
+        string="Assigned To",
+        compute="_compute_person_id",
+        precompute=True,
+        store=True,
+        readonly=False,
+        index=True,
+    )
     person_phone = fields.Char(related="person_id.phone", string="Worker Phone")
     scheduled_date_start = fields.Datetime(string="Scheduled Start (ETA)")
     scheduled_duration = fields.Float(help="Scheduled duration of the work in" " hours")
     scheduled_date_end = fields.Datetime(string="Scheduled End")
     sequence = fields.Integer(default=10)
-    todo = fields.Text(string="Instructions")
+    todo = fields.Text(
+        string="Instructions",
+        compute="_compute_todo",
+        precompute=True,
+        store=True,
+        readonly=False,
+    )
 
     # Execution
     resolution = fields.Text()
@@ -195,19 +206,24 @@ class FSMOrder(models.Model):
 
     # Location
     territory_id = fields.Many2one(
-        "res.territory",
-        string="Territory",
         related="location_id.territory_id",
+        precompute=True,
         store=True,
     )
     branch_id = fields.Many2one(
-        "res.branch", string="Branch", related="location_id.branch_id", store=True
+        related="location_id.branch_id",
+        precompute=True,
+        store=True,
     )
     district_id = fields.Many2one(
-        "res.district", string="District", related="location_id.district_id", store=True
+        related="location_id.district_id",
+        precompute=True,
+        store=True,
     )
     region_id = fields.Many2one(
-        "res.region", string="Region", related="location_id.region_id", store=True
+        related="location_id.region_id",
+        precompute=True,
+        store=True,
     )
 
     # Fields for Geoengine Identify
@@ -233,10 +249,76 @@ class FSMOrder(models.Model):
     equipment_id = fields.Many2one("fsm.equipment", string="Equipment")
 
     # Equipment used for all other Service Orders
-    equipment_ids = fields.Many2many("fsm.equipment", string="Equipments")
+    equipment_ids = fields.Many2many(
+        "fsm.equipment",
+        string="Equipments",
+        compute="_compute_equipment_ids",
+        precompute=True,
+        store=True,
+        readonly=False,
+    )
     type = fields.Many2one("fsm.order.type")
 
     internal_type = fields.Selection(related="type.internal_type")
+
+    @api.depends("company_id")
+    def _compute_equipment_ids(self):
+        for rec in self:
+            # Clear equipments that no longer match the order company
+            to_remove = rec.equipment_ids.filtered(
+                lambda equipment, rec=rec: equipment.company_id != rec.company_id
+            )
+            if to_remove:
+                rec.equipment_ids = [
+                    Command.unlink(equipment.id) for equipment in to_remove
+                ]
+            # If we have no equipments, auto populate if needed
+            if (
+                rec.company_id.auto_populate_equipments_on_order
+                and not rec.equipment_ids
+            ):
+                rec.equipment_ids = self.env["fsm.equipment"].search(
+                    [
+                        ("current_location_id", "=", rec.location_id.id),
+                        ("company_id", "=", rec.company_id.id),
+                    ]
+                )
+
+    @api.depends("location_id")
+    def _compute_location_directions(self):
+        for rec in self:
+            rec.location_directions = rec.location_id.complete_direction
+
+    @api.depends("template_id")
+    def _compute_todo(self):
+        for rec in self:
+            if rec.template_id:
+                rec.todo = rec.template_id.instructions
+
+    @api.depends("equipment_ids", "equipment_id")
+    def _compute_description(self):
+        for rec in self:
+            if rec.description:
+                continue
+            equipments = (
+                rec.equipment_id
+                if rec.internal_type in ("repair", "maintenance")
+                else rec.equipment_ids
+            )
+            rec.description = "\n".join(
+                equipment.notes for equipment in equipments if equipment.notes
+            )
+
+    @api.depends("territory_id")
+    def _compute_person_id(self):
+        """Compute the person from the territory"""
+        for rec in self:
+            # If the person is one of the territory's workers, keep it.
+            if rec.person_id in rec.territory_id.person_ids:
+                continue
+            # If the territory has a primary assignment, use it.
+            if rec.territory_id.person_id:
+                rec.person_id = rec.territory_id.person_id
 
     @api.model
     def _read_group_stage_ids(self, stages, domain, order):
@@ -362,51 +444,25 @@ class FSMOrder(models.Model):
         else:
             self.scheduled_date_end = self.scheduled_date_start
 
-    def copy_notes(self):
-        old_desc = self.description
-        self.location_directions = ""
-        if self.type and self.type.name not in ["repair", "maintenance"]:
-            for equipment_id in self.equipment_ids.filtered(lambda eq: eq.notes):
-                desc = self.description or ""
-                self.description = desc + equipment_id.notes + "\n "
-        else:
-            if self.equipment_id.notes:
-                desc = self.description if self.description else ""
-                self.description = desc + self.equipment_id.notes + "\n "
-        if self.location_id:
-            self.location_directions = self._get_location_directions(self.location_id)
-        if self.template_id:
-            self.todo = self.template_id.instructions
-        if old_desc:
-            self.description = old_desc
-
-    @api.onchange("equipment_ids")
-    def onchange_equipment_ids(self):
-        self.copy_notes()
-
     @api.onchange("template_id")
     def _onchange_template_id(self):
         if self.template_id:
             self.category_ids = self.template_id.category_ids
             self.scheduled_duration = self.template_id.duration
-            self.copy_notes()
             if self.template_id.type_id:
                 self.type = self.template_id.type_id
             if self.template_id.team_id:
                 self.team_id = self.template_id.team_id
 
     def _get_location_directions(self, location_id):
-        self.location_directions = ""
-        s = self.location_id.direction or ""
-        parent_location = self.location_id.fsm_parent_id
-        # ps => Parent Location Directions
-        # s => String to Return
-        while parent_location.id is not False:
-            ps = parent_location.direction
-            if ps:
-                s += parent_location.direction
-            parent_location = parent_location.fsm_parent_id
-        return s
+        # TODO(migration): Remove this method
+        warnings.warn(
+            "Deprecated fsm.order._get_location_directions(), "
+            "use location.complete_direction instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return location_id.complete_direction
 
     @api.constrains("scheduled_date_start")
     def _check_scheduled_date_calendar_leaves(self):
