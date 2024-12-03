@@ -13,7 +13,11 @@ class TestFSMOrder(TransactionCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.Order = cls.env["fsm.order"]
+        cls.person_1 = cls.env.ref("fieldservice.person_1")
+        cls.person_2 = cls.env.ref("fieldservice.person_2")
+        cls.person_3 = cls.env.ref("fieldservice.person_3")
         cls.test_location = cls.env.ref("fieldservice.test_location")
+        cls.test_territory = cls.env.ref("base_territory.test_territory")
         cls.stage1 = cls.env.ref("fieldservice.fsm_stage_completed")
         cls.stage2 = cls.env.ref("fieldservice.fsm_stage_cancelled")
         cls.init_values = {
@@ -171,7 +175,6 @@ class TestFSMOrder(TransactionCase):
         order4.action_complete()
         order3.action_cancel()
         self.env.user.company_id.auto_populate_equipments_on_order = True
-        order._onchange_location_id_customer()
         self.assertEqual(order.custom_color, order.stage_id.custom_color)
         # Test _compute_duration
         self.assertEqual(order.duration, hours_diff)
@@ -238,17 +241,20 @@ class TestFSMOrder(TransactionCase):
                 }
             )
         order.description = "description"
-        order.copy_notes()
+        order.equipment_ids = equipment
+        self.assertEqual(order.description, "description", "Shouldn't have changed")
         order.description = False
-        order.copy_notes()
-        order.type = False
-        order.equipment_id = equipment.id
-        order.onchange_equipment_ids()
+        equipment.notes = "equipment notes"
+        order.equipment_ids = equipment
+        self.assertEqual(
+            order.description,
+            equipment.notes,
+            "Description should be set from equipment",
+        )
         order.type = False
         order.description = False
         self.location_1.direction = "Test Direction"
         order2.location_id.fsm_parent_id = self.location_1.id
-        order.copy_notes()
         data = (
             self.env["fsm.order"]
             .with_context(**{"default_team_id": self.test_team.id})
@@ -286,3 +292,53 @@ class TestFSMOrder(TransactionCase):
             order.stage_id.stage_type = "location"
             order.can_unlink()
             order.unlink()
+
+    def test_order_person_from_territory(self):
+        self.test_territory.person_ids = self.person_1 | self.person_2
+        self.test_territory.person_id = self.person_1
+        order = self.env["fsm.order"].create(
+            {
+                "location_id": self.test_location.id,
+                "stage_id": self.stage1.id,
+            }
+        )
+        self.assertEqual(
+            order.person_id,
+            self.person_1,
+            "Person should be assigned from territory",
+        )
+        # Other location with no territory, person should be kept
+        order.location_id = self.env.ref("fieldservice.location_1")
+        self.assertEqual(
+            order.person_id,
+            self.person_1,
+            "Person should be kept, because no territory is set",
+        )
+        # Other location with territory, matching person
+        other_location = self.env.ref("fieldservice.location_2")
+        other_location.territory_id = self.test_territory.copy(
+            {
+                "person_ids": (self.person_1 + self.person_2 + self.person_3).ids,
+                "person_id": self.person_3.id,
+            }
+        )
+        order.location_id = other_location
+        self.assertEqual(
+            order.person_id,
+            self.person_1,
+            "Person should be kept, because it's a territory worker",
+        )
+        # Other location with territory, unmatching person
+        other_location = self.env.ref("fieldservice.location_3")
+        other_location.territory_id = self.test_territory.copy(
+            {
+                "person_ids": (self.person_2 + self.person_3).ids,
+                "person_id": self.person_3.id,
+            }
+        )
+        order.location_id = other_location
+        self.assertEqual(
+            order.person_id,
+            self.person_3,
+            "Person should be assigned from territory",
+        )
