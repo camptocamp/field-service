@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools import format_date
 
 from . import fsm_stage
 
@@ -400,19 +401,24 @@ class FSMOrder(models.Model):
         return s
 
     @api.constrains("scheduled_date_start")
-    def check_day(self):
+    def _check_scheduled_date_calendar_leaves(self):
         for rec in self:
             if not rec.scheduled_date_start:
                 continue
-
             holidays = self.env["resource.calendar.leaves"].search(
                 [
                     ("date_from", ">=", rec.scheduled_date_start),
                     ("date_to", "<=", rec.scheduled_date_end),
-                ]
+                ],
             )
             if holidays:
-                msg = "{} is a holiday {}".format(
-                    rec.scheduled_date_start.date(), holidays[0].name
+                raise ValidationError(
+                    _(
+                        "%(date)s is a holiday: %(holidays)s",
+                        date=format_date(
+                            self.env,
+                            fields.Date.context_today(self, rec.scheduled_date_start),
+                        ),
+                        holidays=", ".join(map(str, holidays.mapped("name"))),
+                    )
                 )
-                raise ValidationError(_(msg))
