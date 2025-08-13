@@ -1,6 +1,6 @@
-==================================
-Field Sservice Recurring Agreement
-==================================
+=================================
+Field Service Recurring Agreement
+=================================
 
 .. 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -28,7 +28,9 @@ Field Sservice Recurring Agreement
 
 |badge1| |badge2| |badge3| |badge4| |badge5|
 
-
+Adds the ability to link recurring field service tasks to agreements.
+This allows associating agreements with recurring tasks and
+automatically sets the agreement on generated sales orders.
 
 **Table of contents**
 
