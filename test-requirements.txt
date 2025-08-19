@@ -1,0 +1,3 @@
+odoo-addon-repair_order_template @ git+https://github.com/OCA/repair.git@refs/pull/118/head#subdirectory=repair_order_template
+odoo-addon-fieldservice @ git+https://github.com/OCA/field-service.git@refs/pull/1452/head#subdirectory=fieldservice
+odoo-addon-fieldservice_repair @ git+https://github.com/OCA/field-service.git@refs/pull/1452/head#subdirectory=fieldservice_repair
