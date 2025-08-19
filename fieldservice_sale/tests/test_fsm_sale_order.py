@@ -537,7 +537,6 @@ class TestFSMSaleOrder(TestFSMSale):
 
     def test_sale_order_6(self):
         """Test sale order commitment date propagation to FSM orders"""
-        self.sale_order_3.commitment_date = self.dt1
         # Confirm the sale order
         self.sale_order_3.action_confirm()
         # 2 orders created and SOLs linked to FSM orders
@@ -546,6 +545,7 @@ class TestFSMSaleOrder(TestFSMSale):
             2,
             "FSM Sale: Sale Order 3 should create 2 FSM Orders",
         )
+        self.sale_order_3.commitment_date = self.dt1
         self.assertEqual(
             self.sale_order_3.fsm_order_ids.mapped("scheduled_date_start")[0],
             self.sale_order_3.commitment_date,
