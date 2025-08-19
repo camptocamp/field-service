@@ -89,7 +89,7 @@ class SaleOrder(models.Model):
             "location_id": self.fsm_location_id.id,
             "location_directions": self.fsm_location_id.direction,
             "request_early": self.expected_date,
-            "scheduled_date_start": self.expected_date,
+            "scheduled_date_start": self.commitment_date,
             "todo": note,
             "category_ids": [(6, 0, categories.ids)],
             "scheduled_duration": hours,
@@ -229,3 +229,18 @@ class SaleOrder(models.Model):
         else:
             action = {"type": "ir.actions.act_window_close"}
         return action
+
+    def write(self, vals):
+        res = super().write(vals)
+        for order in self:
+            # FSM Orders are created when the sale order is confirmed.
+            # So we skip the commitment_date propagation if the sale order is in draft.
+            # That means that the FSM Orders are not created yet.
+            # We also skip if the sale order is cancelled as it makes no sense.
+            if (
+                order.state not in ("draft", "cancel")
+                and vals.get("commitment_date") is not None
+            ):
+                for fsm_order in order.fsm_order_ids:
+                    fsm_order.scheduled_date_start = vals["commitment_date"]
+        return res
