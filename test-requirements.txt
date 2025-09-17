@@ -1,1 +1,2 @@
 odoo-addon-agreement_sale @ git+https://github.com/OCA/agreement.git@refs/pull/51/head#subdirectory=agreement_sale
+odoo-addon-repair_order_template @ git+https://github.com/OCA/repair.git@refs/pull/118/head#subdirectory=repair_order_template
