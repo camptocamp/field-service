@@ -3,7 +3,7 @@
 
 from datetime import timedelta
 
-from odoo import fields
+from odoo import Command, fields
 from odoo.exceptions import ValidationError
 from odoo.tests import Form, TransactionCase
 
@@ -60,16 +60,16 @@ class TestFSMRepairCommon(TransactionCase):
             "date_start": fields.Datetime.today(),
             "date_end": fields.Datetime.today() + timedelta(hours=100),
             "request_early": fields.Datetime.today(),
-            "equipment_id": self.equipment.id,
+            "equipment_ids": [Command.link(self.equipment.id)],
         }
 
     def test_fsm_repair_order_fails_if_no_equipment(self):
         with self.assertRaisesRegex(
             ValidationError,
-            "The Equipment must be set to create a Repair Order.",
+            "Equipments must be set to create Repair Orders.",
         ):
             order_vals = self._prepare_fsm_order_vals()
-            order_vals.pop("equipment_id")
+            order_vals.pop("equipment_ids")
             self.env["fsm.order"].create(order_vals)
 
     def test_fsm_repair_order_fails_if_no_current_stock_location(self):
@@ -84,33 +84,34 @@ class TestFSMRepairCommon(TransactionCase):
 
     def test_fsm_repair_order_creates_repair_order(self):
         order = self.env["fsm.order"].create(self._prepare_fsm_order_vals())
-        self.assertTrue(order.repair_id, "Repair order was created")
-        self.assertEqual(order.repair_id.state, "draft")
-        self.assertEqual(order.repair_id.name, order.name)
-        self.assertEqual(order.repair_id.product_id, self.equipment.product_id)
-        self.assertEqual(order.repair_id.product_uom, self.equipment.product_id.uom_id)
-        self.assertEqual(order.repair_id.location_id, self.stock_location)
-        self.assertEqual(order.repair_id.lot_id, self.equipment.lot_id)
-        self.assertEqual(order.repair_id.product_qty, 1)
-        self.assertEqual(order.repair_id.internal_notes, order.description)
+        self.assertTrue(order.repair_ids, "Repair order was created")
+        repair_order = order.repair_ids[0]
+        self.assertEqual(repair_order.state, "draft")
+        self.assertEqual(repair_order.name, f"{order.name} - {self.equipment.name}")
+        self.assertEqual(repair_order.product_id, self.equipment.product_id)
+        self.assertEqual(repair_order.product_uom, self.equipment.product_id.uom_id)
+        self.assertEqual(repair_order.location_id, self.stock_location)
+        self.assertEqual(repair_order.lot_id, self.equipment.lot_id)
+        self.assertEqual(repair_order.product_qty, 1)
+        self.assertEqual(repair_order.internal_notes, order.description)
 
     def test_fsm_repair_order_is_created_when_type_is_switched_to_repair(self):
         order_vals = self._prepare_fsm_order_vals()
         order_vals["type"] = self.fsm_type.id
         order = self.env["fsm.order"].create(order_vals)
-        self.assertFalse(order.repair_id, "Repair order was not created, wrong type")
+        self.assertFalse(order.repair_ids, "Repair order was not created, wrong type")
         order.type = self.repair_type
-        self.assertTrue(order.repair_id, "Repair order was created")
+        self.assertTrue(order.repair_ids, "Repair order was created")
 
     def test_fsm_repair_order_is_canceled_when_type_is_switched_to_not_repair(self):
         order_vals = self._prepare_fsm_order_vals()
         order = self.env["fsm.order"].create(order_vals)
-        self.assertTrue(order.repair_id, "Repair order was created")
-        self.assertEqual(order.repair_id.state, "draft")
-        repair_order = order.repair_id
+        self.assertTrue(order.repair_ids, "Repair order was created")
+        repair_order = order.repair_ids[0]
+        self.assertEqual(repair_order.state, "draft")
         order.type = self.fsm_type
         self.assertEqual(repair_order.state, "cancel", "Repair order was canceled")
-        self.assertFalse(order.repair_id, "Repair order was unlinked from the FSM")
+        self.assertFalse(order.repair_ids, "Repair order was unlinked from the FSM")
 
     def test_warning_is_shown_when_type_is_switched_to_not_repair(self):
         order_vals = self._prepare_fsm_order_vals()
@@ -119,7 +120,7 @@ class TestFSMRepairCommon(TransactionCase):
             with self.assertLogs("odoo.tests.form.onchange") as log_catcher:
                 form.type = self.fsm_type
                 self.assertIn(
-                    "The repair order will be cancelled",
+                    "The repair orders will be cancelled",
                     log_catcher.output[0],
                 )
             with self.assertNoLogs("odoo.tests.form.onchange"):
