@@ -161,7 +161,7 @@ class FSMOrder(models.Model):
         return vals
 
     request_late = fields.Datetime(string="Latest Request Date")
-    description = fields.Text(
+    description = fields.Html(
         compute="_compute_description",
         precompute=True,
         store=True,
@@ -186,7 +186,7 @@ class FSMOrder(models.Model):
     )
 
     # Execution
-    resolution = fields.Text()
+    resolution = fields.Html()
     date_start = fields.Datetime(string="Actual Start")
     date_end = fields.Datetime(string="Actual End")
     duration = fields.Float(
@@ -282,7 +282,7 @@ class FSMOrder(models.Model):
         for rec in self:
             if rec.description:
                 continue
-            rec.description = "\n".join(
+            rec.description = "<separator />".join(
                 equipment.notes for equipment in rec.equipment_ids if equipment.notes
             )
 
