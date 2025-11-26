@@ -34,6 +34,7 @@
         "views/fsm_template.xml",
         "views/fsm_team.xml",
         "views/menu.xml",
+        "wizard/fsm_order_sign_wizard.xml",
         "wizard/fsm_wizard.xml",
     ],
     "demo": [

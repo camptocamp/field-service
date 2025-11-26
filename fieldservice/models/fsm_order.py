@@ -136,6 +136,12 @@ class FSMOrder(models.Model):
         help="Company related to this order",
     )
 
+    # Signature
+    signed_by = fields.Char(copy=False, readonly=True)
+    signed_on = fields.Datetime(copy=False, readonly=True)
+    signature = fields.Image(copy=False, max_width=1024, max_height=1024, readonly=True)
+    require_signature = fields.Boolean(related="stage_id.require_signature")
+
     def _calc_request_late(self, vals):
         if vals.get("request_early", False):
             early = fields.Datetime.from_string(vals.get("request_early"))
@@ -376,6 +382,13 @@ class FSMOrder(models.Model):
                 vals["scheduled_date_end"] = str(date_to_with_delta)
         elif vals.get("scheduled_date_start") is not None:
             vals["scheduled_date_end"] = False
+
+    def action_sign(self):
+        """Returns a popup window to sign the order"""
+        self.ensure_one()
+        return self.env["ir.actions.act_window"]._for_xml_id(
+            "fieldservice.fsm_order_sign_wizard_action"
+        )
 
     def action_complete(self):
         return self.with_context(bypass_order_completed_stage=True).write(
