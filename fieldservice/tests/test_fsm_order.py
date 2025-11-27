@@ -9,6 +9,8 @@ from odoo.tests import Form
 from odoo.tests.common import TransactionCase
 from odoo.tools import mute_logger
 
+TEST_IMAGE_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAACklEQVR4nGP4DwABAQEAGN2N9wAAAABJRU5ErkJggg=="  # noqa: E501
+
 
 class TestFSMOrder(TransactionCase):
     @classmethod
@@ -299,3 +301,23 @@ class TestFSMOrder(TransactionCase):
             order.stage_id.stage_type = "location"
             order.can_unlink()
             order.unlink()
+
+    def test_order_sign(self):
+        order = self.Order.create(
+            {
+                "location_id": self.test_location.id,
+                "stage_id": self.stage1.id,
+            }
+        )
+        order.stage_id.require_signature = True
+        # Sign it
+        Wizard = self.env["fsm.order.sign.wizard"].with_context(
+            active_model=order._name, active_id=order.id
+        )
+        with Form(Wizard) as wizard_form:
+            wizard_form.signed_by = "Test Customer"
+            wizard_form.signature = TEST_IMAGE_BASE64
+        wizard_form.record.action_sign()
+        # Check that the signature has been updated
+        self.assertEqual(order.signed_by, "Test Customer")
+        self.assertEqual(order.signed_on, fields.Datetime.now())
